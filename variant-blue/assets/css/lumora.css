@@ -9100,3 +9100,17 @@ footer{border-top:3px solid var(--primitive-color--primary-500,#2f80ff);}
 /* ===== Hero rotating carousel ===== */
 .hero-carousel-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.4s ease;}
 .hero-carousel-img.is-active{opacity:1;}
+
+/* ===== Hero: pull content up so the info strip is visible on load ===== */
+.padding-home-hero{padding-top:60px!important;}
+.our-info_wrap{margin-top:-135px;}
+
+/* ===== Premium DARK footer (was bland cream) ===== */
+.section_footer{background:var(--primitive-color--primary-900,#011f23)!important;border-top:3px solid var(--primitive-color--primary-500,#24a3b1);}
+.section_footer, .section_footer .text-color-dark, .section_footer p, .section_footer div, .section_footer a{color:#cdd8da!important;}
+.section_footer h1,.section_footer h2,.section_footer h3,.section_footer h4,.section_footer .footer-menu_title{color:#ffffff!important;}
+.section_footer a:hover{color:#ffffff!important;}
+.section_footer .footer-bottom_right-divider,.section_footer [class*="divider"]{background:rgba(255,255,255,.14)!important;border-color:rgba(255,255,255,.14)!important;}
+.section_footer .footer-external_link{color:var(--primitive-color--primary-500,#24a3b1)!important;}
+.section_footer .social_icon{color:#cdd8da!important;}
+.section_footer .button_primary .button_text,.section_footer .button_text{color:var(--primitive-color--primary-900,#011f23)!important;}
