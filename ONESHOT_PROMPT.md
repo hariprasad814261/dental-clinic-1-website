@@ -1,4 +1,4 @@
-# THE ONE-SHOT PROMPT — Build a premium dental-clinic website from scratch
+# THE ONE-SHOT PROMPT: reproduce this exact premium dental website (copy the files in Section 22, do not redesign)
 
 > HOW TO USE THIS FILE
 > 1. Copy this entire document into any capable coding agent (Claude Code, Cursor, Windsurf, etc.).
@@ -13,6 +13,38 @@
 > hero lead-capture form), the exact copy for every section of every page, the full text of all legal
 > pages, all image-generation prompts, the color-variant recipe, the SEO/meta, the accessibility and
 > performance rules, the QA/acceptance checklist, and the deployment steps. Nothing is left to guess.
+
+---
+
+## 0.0 STOP. READ THIS BEFORE YOU WRITE A SINGLE LINE. (highest priority, overrides all)
+
+This prompt is NOT a design brief. It is a reproduction spec. Your job is to RECREATE the exact site
+defined in Section 22 (the complete copy-paste build). Do not invent a new design.
+
+ABSOLUTE RULES (breaking any one = failure):
+1. COPY THE FILES IN SECTION 22 VERBATIM. Write `assets/css/styles.css`, `assets/js/app.js`, and the
+   HTML pages exactly as given there. Only change the PLACEHOLDERS (Section 0) and the images. Do NOT
+   rename classes, restructure sections, reorder the hero, change the layout, or "improve" anything.
+   Sections 1 to 21 are EXPLANATION ONLY; Section 22 is the SOURCE OF TRUTH. If they ever seem to
+   differ, Section 22 wins.
+2. PLAIN STATIC STACK ONLY. Multi-page `.html` + ONE `styles.css` + ONE `app.js` (vanilla JS) + GSAP.
+   FORBIDDEN: React, Vue, Next, Astro, Svelte, Vite, webpack, Tailwind, any framework, bundler, build
+   step, or dev server. The site must open by double-clicking `index.html` or via
+   `python3 -m http.server`. If your output runs on `localhost:5173` (Vite) or needs `npm run dev`, you
+   have FAILED; start over as plain files.
+3. IMAGES: if you cannot generate them, DO NOT pull random stock (loremflickr / picsum / source.unsplash).
+   Those return irrelevant photos (a businesswoman, a child, software screenshots) and look broken. Use
+   the deterministic on-brand SVG placeholder in Section 5.2 for every missing image. A clean
+   teal-gradient placeholder looks intentional; a random photo looks broken. (The app.js image guard in
+   22.1 already swaps any failed image to this placeholder; do not change it to a photo service.)
+4. KEEP EVERY ANIMATED COMPONENT exactly as in Section 22: the hero (headline visible by default, form
+   under the button), the scroll-reveal on every section, the animated counters, the scrolling marquee
+   strip, BOTH sliders (story + testimonials with arrows/dots/drag), the hover effects, the dark footer.
+   Do not drop any of them.
+5. VERIFY with the Section 15.1 snippet on every page before saying done: no hidden elements, no broken
+   images, an H1 on every page.
+
+Reproduce Section 22 exactly. Nothing else.
 
 ---
 
@@ -242,27 +274,31 @@ JPG named `gen_<slot>.jpg` under `assets/img/` and reference it locally. If a sl
 `srcset`, point every candidate at the same JPG (identical file at all widths is valid).
 
 ### 5.2 IMAGE FALLBACK (mandatory) — never ship a broken or empty image
-If you do not have a working image tool, or any generation fails, DO NOT leave the slot empty and DO
-NOT stop to ask. Fall back automatically, in this order, so every image area is always filled:
-1. **Reliable stock by keyword.** Use a source that always returns a real photo, for example
-   `https://loremflickr.com/1280/720/dentist,clinic` or `https://picsum.photos/seed/<slot>/1280/720`.
-   Download it to `assets/img/gen_<slot>.jpg` so the site stays self-contained. (loremflickr lets you
-   pass keywords like `dentist,clinic,smile` so the fallback is on-topic; picsum is a guaranteed
-   generic photo if loremflickr is down.)
-2. **Branded SVG placeholder (always works, zero network).** If even that is unreachable, write a local
-   SVG: a brand-gradient rectangle of the right aspect ratio with the slot label centered, save as
-   `gen_<slot>.jpg`-equivalent (`.svg`) and reference it. Example:
-   ```html
-   <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
-     <defs><linearGradient id="g" x1="0" y1="0" x2="1280" y2="720" gradientUnits="userSpaceOnUse">
-       <stop offset="0" stop-color="[ACCENT]"/><stop offset="1" stop-color="[INK_DARK]"/></linearGradient></defs>
-     <rect width="1280" height="720" fill="url(#g)"/>
-     <text x="640" y="370" fill="#ffffff" font-family="Sora,Arial" font-size="40" text-anchor="middle"
-       opacity="0.85">[BUSINESS_NAME]</text></svg>
-   ```
-Whatever the source, every `<img>` must end up with a valid `src` that paints a non-empty image.
-Also add `onerror="this.src='assets/img/gen_<slot>.jpg'||this.style.display='none'"` only as a last
-guard, not as the primary plan. The rule: a visitor must never see a gray box or a broken-image icon.
+If you cannot generate images, DO NOT leave slots empty, DO NOT stop to ask, and DO NOT pull random
+stock. Random photo services (loremflickr, picsum, source.unsplash, "unsplash by keyword") return
+off-topic images (a businesswoman, a child, a software screenshot) and a themed site instantly looks
+broken. Use a DETERMINISTIC on-brand SVG placeholder for every missing image, so the page looks
+designed and cohesive instead of random.
+
+PRIMARY fallback (use whenever you cannot produce a real, on-topic photo): write a local brand-gradient
+SVG per slot and reference it like any image. It always renders, needs no network, and looks intentional:
+```html
+<!-- save as assets/img/gen_<slot>.svg and reference it in the <img src> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1280" y2="720" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="[ACCENT]"/><stop offset="1" stop-color="[INK_DARK]"/></linearGradient></defs>
+  <rect width="1280" height="720" fill="url(#g)"/>
+  <circle cx="640" cy="298" r="46" fill="#ffffff" opacity="0.9"/>
+  <text x="640" y="436" fill="#ffffff" font-family="Sora,Arial" font-size="42" font-weight="600"
+    text-anchor="middle" opacity="0.92">[BUSINESS_NAME]</text></svg>
+```
+OPTIONAL upgrade (only if you want real photos): curate a SHORT list of SPECIFIC image URLs you have
+verified resolve to on-topic dental/clinic photos, and download them locally. Never use a keyword or
+random endpoint that can return off-topic images.
+
+Belt-and-suspenders: every `<img>` in this build is covered by the app.js image guard (22.1), which
+swaps any failed load to the branded placeholder data-URI, so a visitor never sees a gray box, a red
+box, or a broken-image icon. Do not change that guard to a photo service.
 
 A reusable photographic style suffix to append to each prompt:
 > "photorealistic, premium healthcare advertising photography, bright airy modern dental clinic, soft
@@ -1335,12 +1371,24 @@ Load order on every page, just before `</body>`:
     return false;
   };
 
-  /* 8) IMAGE FALLBACK GUARD — if any image 404s, swap to a generic photo so nothing breaks. */
+  /* 8) IMAGE FALLBACK GUARD — if any image fails, swap to a clean ON-BRAND placeholder (never a random
+        photo). Deterministic, on-theme, looks intentional. Edit ACCENT/INK if not using the teal default. */
   function imgGuard() {
+    var ACCENT = '#24a3b1', INK = '#011f23';
+    function placeholder(label) {
+      var t = (label || '[BUSINESS_NAME]').replace(/[<>&]/g, '').slice(0, 22);
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">'
+        + '<defs><linearGradient id="g" x1="0" y1="0" x2="1280" y2="720" gradientUnits="userSpaceOnUse">'
+        + '<stop offset="0" stop-color="' + ACCENT + '"/><stop offset="1" stop-color="' + INK + '"/></linearGradient></defs>'
+        + '<rect width="1280" height="720" fill="url(#g)"/>'
+        + '<circle cx="640" cy="298" r="44" fill="#ffffff" opacity="0.9"/>'
+        + '<text x="640" y="436" fill="#ffffff" font-family="Sora,Arial" font-size="40" font-weight="600" text-anchor="middle" opacity="0.92">' + t + '</text></svg>';
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
     document.querySelectorAll('img').forEach(function (im) {
       im.addEventListener('error', function () {
         if (im.dataset.fbk) return; im.dataset.fbk = '1';
-        im.src = 'https://picsum.photos/seed/' + encodeURIComponent((im.alt || 'image').slice(0, 24)) + '/1280/720';
+        im.src = placeholder(im.alt);
       });
     });
   }
@@ -1422,6 +1470,17 @@ p{margin:0;color:var(--muted);}
 .hero .container{position:relative;z-index:2;width:100%;}
 .hero h1{color:#fff;max-width:16ch;}
 .hero .lead{color:rgba(255,255,255,.88);margin:18px 0 26px;}
+
+/* scrolling marquee strip — a pure-CSS scroll-based component (no JS, always animates) */
+.marquee{background:var(--ink-dark,#011f23);overflow:hidden;border-top:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid rgba(255,255,255,.08);}
+.marquee_track{display:flex;width:max-content;gap:0;animation:marquee 28s linear infinite;}
+.marquee:hover .marquee_track{animation-play-state:paused;}
+.marquee_item{display:inline-flex;align-items:center;gap:14px;padding:18px 34px;color:#fff;
+  font-family:Sora,Arial,sans-serif;font-weight:600;font-size:18px;white-space:nowrap;letter-spacing:.2px;}
+.marquee_item::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent,#24a3b1);flex:0 0 auto;}
+@keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@media (prefers-reduced-motion:reduce){.marquee_track{animation:none;flex-wrap:wrap;}}
 
 /* eyebrow pill */
 .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;margin-bottom:16px;border-radius:var(--radius-pill);
@@ -1658,6 +1717,25 @@ SCRIPTS (every page, immediately before `</body>`, after the footer):
           <div class="lead-form_sub">Our team will call you within 10 minutes.</div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- SCROLLING MARQUEE STRIP (pure-CSS scroll component; the list is duplicated once for a seamless loop) -->
+  <section class="marquee" aria-hidden="true">
+    <div class="marquee_track">
+      <span class="marquee_item">Same-day emergency care</span>
+      <span class="marquee_item">Transparent, upfront pricing</span>
+      <span class="marquee_item">Gentle, anxiety-free dentistry</span>
+      <span class="marquee_item">Award-winning clinicians</span>
+      <span class="marquee_item">Modern digital scanning</span>
+      <span class="marquee_item">Flexible payment plans</span>
+      <!-- duplicate set for the seamless -50% loop -->
+      <span class="marquee_item">Same-day emergency care</span>
+      <span class="marquee_item">Transparent, upfront pricing</span>
+      <span class="marquee_item">Gentle, anxiety-free dentistry</span>
+      <span class="marquee_item">Award-winning clinicians</span>
+      <span class="marquee_item">Modern digital scanning</span>
+      <span class="marquee_item">Flexible payment plans</span>
     </div>
   </section>
 
