@@ -94,3 +94,6 @@ is a CSS variant and is fine to keep.)
   original hero + `gen_hero-2/3/4.jpg` (new Magnific gpt-2 images). CSS + cycler JS in place, both variants.
 - Lead form was mistakenly inserted in the navbar; moved into `home-hero_content` right after the hero
   Book Appointment button (anchored on data-w-id 123dbd0a...). Now stacks: headline, button, form (left).
+
+## Testimonial card background (14 Jun 2026)
+- `.testimonial-slider_card` now uses `gen_testimonial-bg.jpg` (clinic + greenery) under a cyan/teal overlay (blue overlay on the blue variant); card text forced white. CSS cache-bust at `?v=20260614c`.
