@@ -62,9 +62,11 @@ is a CSS variant and is fine to keep.)
   testimonial-background + home-hero-mobile-image. Regenerate later if wanted.
 
 ## TODO / open
-- **AI image regeneration (Magnific):** not done — Magnific MCP was not connected. When connected,
-  regenerate hero (`…dentist-examining-patients-teeth-close-up_1.webp`), about hero, team photos,
-  testimonial avatars, then story/service/blog thumbs. Keep identical dimensions so layout/IX2 hold.
+- AI image regeneration: DONE (see "AI imagery" above; 32 `gen_*.jpg`). Not yet regenerated:
+  decorative awards/job/location/success images + CSS mobile-hero — optional.
+- **Live deploy: BLOCKED** — Netlify account credits exhausted; GitHub Pages needs a paid plan for
+  the private repo. To go live, pick one: add Netlify credits (then redeploy to the existing site),
+  make the GitHub repo public (enables free Pages), or deploy to the Hostinger VPS.
 - Optional polish: real clinic phone number, real OG image, real social profile URLs (currently `#`).
 
 ## Variants, legal, deploy, prompt (added 14 Jun 2026)
