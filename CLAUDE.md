@@ -64,9 +64,7 @@ is a CSS variant and is fine to keep.)
 ## TODO / open
 - AI image regeneration: DONE (see "AI imagery" above; 32 `gen_*.jpg`). Not yet regenerated:
   decorative awards/job/location/success images + CSS mobile-hero — optional.
-- **Live deploy: BLOCKED** — Netlify account credits exhausted; GitHub Pages needs a paid plan for
-  the private repo. To go live, pick one: add Netlify credits (then redeploy to the existing site),
-  make the GitHub repo public (enables free Pages), or deploy to the Hostinger VPS.
+- LIVE on GitHub Pages: https://toprmrproducer.github.io/lumora-dental/ (teal) and /variant-blue/ (blue). Repo is public.
 - Optional polish: real clinic phone number, real OG image, real social profile URLs (currently `#`).
 
 ## Variants, legal, deploy, prompt (added 14 Jun 2026)
