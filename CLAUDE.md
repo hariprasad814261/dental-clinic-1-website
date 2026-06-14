@@ -5,6 +5,20 @@ template (originally "Smilifye" by author "Flowfye"). Every Webflow/template tra
 stripped and all assets localized so the site is fully self-contained and indistinguishable as
 an original build.
 
+## Handoff / reproduction (preferred method — 14 Jun 2026)
+The repo is **public** and **the source of truth**. The reliable one-shot is now **`CLONE_AND_DEPLOY.md`**:
+it tells any agent to `git clone https://github.com/toprmrproducer/lumora-dental`, run it, and deploy it
+(GitHub Pages / Netlify drop / Vercel) — **no rebuild, no framework, no image generation** (all 37 AI
+`gen_*.jpg` photos are committed, so a clean clone always looks finished). This replaces the old
+embedded-code `ONESHOT_PROMPT.md`, which executing agents kept "improving" into a Vite/React app with
+random stock images. Cross-platform (Mac/Windows/Linux). `ONESHOT_PROMPT.md` is kept for reference but
+clone-and-deploy is the recommended path.
+
+**Image guard (14 Jun 2026):** every one of the 18 HTML pages now has a tiny inline `<script>` before
+`</body>` (search "image guard:") that swaps any failed/empty `<img>` to an on-brand gradient SVG card
+(teal `#24a3b1`→`#011f23` at root, blue `#2f80ff`→`#06182e` in `variant-blue/`). So even if someone
+deletes images during a re-skin, nothing ever shows a broken/gray/red box — it reads as intentional.
+
 ## Structure
 - `index.html` — home (was `Dental.html`)
 - `about.html`, `service.html`, `blog.html` — main pages
