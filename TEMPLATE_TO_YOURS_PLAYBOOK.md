@@ -14,6 +14,34 @@
 >   PART B: the human operator notes (why each step exists, the gotchas, the exact code snippets).
 
 ================================================================================
+BULLETPROOF ADDENDUM (read first; overrides anything below on conflict)
+================================================================================
+The output must look complete and polished on the first run, for anyone, even if a step fails:
+1. VISIBLE BY DEFAULT. The finished page must render fully with JavaScript OFF. For a from-scratch
+   build, never put `opacity:0` in HTML/CSS; animate with `gsap.from(..., {immediateRender:false,
+   once:true})`. For a converted template that already ships baked `opacity:0` on `[data-w-id]`
+   elements, FIRST clear it so content is visible, THEN animate in, and keep a 2.6s safety net that
+   force-shows anything still at opacity 0. The hero H1 and every heading must never be blank.
+   Failsafe reveal for the conversion case:
+   ```js
+   els.forEach(function(el){
+     gsap.set(el,{clearProps:'opacity,transform,filter'});           // visible by default
+     gsap.from(el,{opacity:0,y:40,duration:.9,ease:'power2.out',immediateRender:false,
+       scrollTrigger: hasST ? {trigger:el,start:'top 94%',once:true} : undefined});
+   });
+   setTimeout(function(){ els.forEach(function(el){
+     if(parseFloat(getComputedStyle(el).opacity)===0){el.style.opacity='1';el.style.transform='none';} }); },2600);
+   ```
+2. NEVER SHIP BROKEN IMAGES. If the image tool is unavailable, fall back automatically to a reliable
+   stock/placeholder source (`https://loremflickr.com/1280/720/<industry>,clinic` or
+   `https://picsum.photos/seed/<slot>/1280/720`), downloaded locally; last resort a brand-gradient SVG.
+   No empty gray boxes, ever. Do not stop to ask.
+3. ANIMATIONS ARE CODE, NOT WORDS. Include hover CSS (buttons + cards lift, image zoom, nav underline,
+   slider arrow hover) and the scroll-reveal JS verbatim.
+4. SELF-VERIFY before done: on every page, confirm no element is at opacity 0, no `<img>` has
+   naturalWidth 0, and an `<h1>` exists. Fix before declaring done.
+
+================================================================================
 PART A — THE PROMPT (paste everything in this part into the agent)
 ================================================================================
 

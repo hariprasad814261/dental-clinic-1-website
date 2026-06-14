@@ -16,6 +16,37 @@
 
 ---
 
+## 0.5 OUTPUT CONTRACT — read this first, it overrides everything if there is ever a conflict
+
+The single most important requirement: **the finished page must look complete and polished on the
+first load, for anyone, even if a step fails.** Many agents and many machines will run this prompt; it
+must not depend on one specific environment. Enforce ALL of these or you have failed:
+
+1. VISIBLE BY DEFAULT (this is the #1 cause of bad output). Do NOT put `opacity:0`,
+   `visibility:hidden`, or any "hidden until animated" state in the HTML or CSS. Every heading
+   (including the hero H1), every paragraph, every image, and every section must render fully even with
+   JavaScript turned OFF. Scroll reveals are PROGRESSIVE ENHANCEMENT added only in JS (section 6.3)
+   using `gsap.from(..., { immediateRender:false, once:true })`, so if a trigger never fires the
+   element simply stays visible. A safety net also force-shows anything that somehow ended hidden. If
+   you ever write `style="opacity:0"` in HTML, STOP, that is the bug that makes the hero text vanish.
+
+2. NEVER SHIP A BROKEN OR EMPTY IMAGE. Try the image tool first. If it is unavailable or fails, use
+   generic placeholder/stock images so every image area is filled (section 5.2). A gray box or a
+   broken-image icon is a failure. Fall back automatically, do not stop and ask.
+
+3. THE HERO H1 MUST BE ON SCREEN ON LOAD. Verify on the home and services pages that the big headline
+   ("Trusted Dental Care for Every Generation", "Comprehensive Dental Care for You") is visible
+   immediately, not blank.
+
+4. ANIMATIONS MUST ACTUALLY BE PRESENT: scroll-reveal (fade + slide up on enter) AND hover effects
+   (buttons and cards lift, links shift, images zoom, nav underline). The exact CSS and JS are given
+   below; include them verbatim.
+
+5. SELF-VERIFY BEFORE FINISHING (section 15.1): run the verification snippet. If it reports any
+   invisible element, any broken image, or a missing H1, fix it before declaring done.
+
+---
+
 ## 0. PLACEHOLDERS (edit these once, then never touch the rest)
 
 ```
@@ -210,6 +241,29 @@ cost: Magnific `gpt-2`, quality `low`, resolution `1k`. Keep each slot's aspect 
 JPG named `gen_<slot>.jpg` under `assets/img/` and reference it locally. If a slot uses responsive
 `srcset`, point every candidate at the same JPG (identical file at all widths is valid).
 
+### 5.2 IMAGE FALLBACK (mandatory) — never ship a broken or empty image
+If you do not have a working image tool, or any generation fails, DO NOT leave the slot empty and DO
+NOT stop to ask. Fall back automatically, in this order, so every image area is always filled:
+1. **Reliable stock by keyword.** Use a source that always returns a real photo, for example
+   `https://loremflickr.com/1280/720/dentist,clinic` or `https://picsum.photos/seed/<slot>/1280/720`.
+   Download it to `assets/img/gen_<slot>.jpg` so the site stays self-contained. (loremflickr lets you
+   pass keywords like `dentist,clinic,smile` so the fallback is on-topic; picsum is a guaranteed
+   generic photo if loremflickr is down.)
+2. **Branded SVG placeholder (always works, zero network).** If even that is unreachable, write a local
+   SVG: a brand-gradient rectangle of the right aspect ratio with the slot label centered, save as
+   `gen_<slot>.jpg`-equivalent (`.svg`) and reference it. Example:
+   ```html
+   <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+     <defs><linearGradient id="g" x1="0" y1="0" x2="1280" y2="720" gradientUnits="userSpaceOnUse">
+       <stop offset="0" stop-color="[ACCENT]"/><stop offset="1" stop-color="[INK_DARK]"/></linearGradient></defs>
+     <rect width="1280" height="720" fill="url(#g)"/>
+     <text x="640" y="370" fill="#ffffff" font-family="Sora,Arial" font-size="40" text-anchor="middle"
+       opacity="0.85">[BUSINESS_NAME]</text></svg>
+   ```
+Whatever the source, every `<img>` must end up with a valid `src` that paints a non-empty image.
+Also add `onerror="this.src='assets/img/gen_<slot>.jpg'||this.style.display='none'"` only as a last
+guard, not as the primary plan. The rule: a visitor must never see a gray box or a broken-image icon.
+
 A reusable photographic style suffix to append to each prompt:
 > "photorealistic, premium healthcare advertising photography, bright airy modern dental clinic, soft
 > natural daylight, subtle teal-and-white palette, shallow depth of field, high detail, no text."
@@ -314,37 +368,48 @@ A small rounded pill: an inline sparkle icon + a short label. The default sparkl
 ```
 
 ### 6.3 The scroll-reveal engine (CRITICAL — paste verbatim before `</body>` on every page)
-Mark every content block you want to animate with `data-reveal`. The engine fades+slides them up as
-they enter the viewport, refreshes triggers after images load, and has a 2.6s safety net that forces
-anything still hidden to show. NO blur.
+Mark content blocks with `data-reveal`. They are ALREADY fully visible in the HTML and CSS; this
+script only animates them IN as they scroll into view. Because it uses `gsap.from` with
+`immediateRender:false`, a missing library, disabled JS, a slow CDN, or a misfired ScrollTrigger all
+leave the content fully visible (never blank). A safety net force-shows anything still hidden after
+2.5s. NO blur. CRITICAL: never add `opacity:0` to the HTML or CSS of these elements, that is exactly
+what makes headings and images disappear. The animation owns the hidden state, the markup does not.
 ```html
 <script src="assets/js/gsap.min.js"></script>
 <script src="assets/js/ScrollTrigger.min.js"></script>
 <script>
 (function () {
   function run() {
-    if (!window.gsap) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!window.gsap || reduce) return;            // no JS or reduced motion -> content already visible
     var hasST = !!window.ScrollTrigger;
     if (hasST) gsap.registerPlugin(ScrollTrigger);
     var els = gsap.utils.toArray('[data-reveal]').filter(function (el) {
       return !el.closest('.nav') && !el.closest('.nav-dropdown-list');
     });
     els.forEach(function (el) {
-      gsap.fromTo(el, { opacity: 0, y: 40 }, {
-        opacity: 1, y: 0, duration: 0.9, ease: 'power2.out',
-        scrollTrigger: hasST ? { trigger: el, start: 'top 95%', once: true } : undefined
+      gsap.from(el, {
+        opacity: 0, y: 40, duration: 0.9, ease: 'power2.out',
+        immediateRender: false,                    // <-- CRITICAL: do not pre-hide; only hide at trigger time
+        scrollTrigger: hasST ? { trigger: el, start: 'top 92%', once: true } : undefined
       });
     });
     if (hasST) { window.addEventListener('load', function(){ ScrollTrigger.refresh(); }); ScrollTrigger.refresh(); }
-    setTimeout(function () { els.forEach(function (el) {
-      if (parseFloat(getComputedStyle(el).opacity) === 0) gsap.set(el, { opacity: 1, y: 0 });
-    }); }, 2600);
+    // safety net: force-show anything still invisible after 2.5s (belt and suspenders)
+    setTimeout(function () {
+      document.querySelectorAll('[data-reveal]').forEach(function (el) {
+        if (parseFloat(getComputedStyle(el).opacity) === 0) { el.style.opacity = '1'; el.style.transform = 'none'; }
+      });
+    }, 2500);
   }
-  document.readyState !== 'loading' ? setTimeout(run, 150)
-    : document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 150); });
+  document.readyState !== 'loading' ? run() : document.addEventListener('DOMContentLoaded', run);
 })();
 </script>
 ```
+Why this matters: the earlier version used `gsap.fromTo({opacity:0}, ...)`, which sets opacity to 0
+immediately on page load. If ScrollTrigger had not initialized yet (slow CDN, wrong load order), the
+hero H1 and whole sections stayed invisible. `gsap.from` + `immediateRender:false` fixes that: the
+element is only hidden at the exact moment its reveal is about to play.
 
 ### 6.4 Animated counters (stat numbers)
 Any element `.stat-number` with text like "25+", "10k+", "92%" counts up from 0 when scrolled into
@@ -524,8 +589,14 @@ Order of sections, each wrapped so `data-reveal` animates the inner blocks (NOT 
 - Content (left): H1 "Trusted Dental Care for Every Generation"; paragraph "We combine modern
   technology with heartfelt service to ensure every generation."; primary button "Book Appointment"
   → `[BOOKING_URL]`.
-- Lead-capture form card (section 6.6) placed top-right of the hero (or under the button on mobile).
-- Keep the hero at least `min-height:92vh`.
+- Lead-capture form card (section 6.6) placed in the hero's main content column, directly UNDER the
+  headline and the primary button. After inserting it, verify by bounding box that it renders BELOW the
+  button and left-aligned with the headline, not floating into the navbar or a side column. It must be
+  always visible (no `data-reveal`, no `opacity:0`).
+- Keep enough top padding that the hero H1 sits clearly below the navbar (about 90 to 110px), and if the
+  hero has a contact/hours strip, tighten spacing so it is visible on load on a normal laptop screen.
+- The hero H1 has NO `opacity:0` and NO `data-reveal` on the H1 itself if you want it instant; if you
+  do animate it, it must still be visible without JS (the section 6.3 engine guarantees this).
 
 ### 7.2 Our Story slider
 - Eyebrow "Our Story". H2 "Redefining Dental Care with Trust, Innovation in Dental Wellness".
@@ -841,6 +912,31 @@ Drive the running site in a real browser (Playwright) and verify ALL of:
 11. `grep` the source: zero website-builder branding, zero generator meta, zero em dashes.
 12. Run the blue variant through 1-11 as well; confirm the theme is blue and the layout is unchanged.
 
+### 15.1 SELF-VERIFY SNIPPET (run on EVERY page before declaring done)
+Paste this in the browser console (or run it via Playwright `page.evaluate`) on each page. It must print
+"OK". If it prints "FAILS", fix every item before you are done. This is the gate that catches the exact
+problems that ruined the first run (invisible hero, broken images, missing H1).
+```js
+(function(){
+  var bad=[];
+  document.querySelectorAll('h1,h2,h3,p,img,[data-reveal]').forEach(function(el){
+    var cs=getComputedStyle(el);
+    if(parseFloat(cs.opacity)===0 || cs.visibility==='hidden')
+      bad.push('HIDDEN: '+el.tagName+'.'+(el.className||'').toString().trim().split(' ')[0]);
+  });
+  document.querySelectorAll('img').forEach(function(im){
+    if(im.complete && im.naturalWidth===0) bad.push('BROKEN IMG: '+(im.getAttribute('src')||''));
+  });
+  if(!document.querySelector('h1')) bad.push('NO <h1> ON THIS PAGE');
+  console.log(bad.length ? ('FAILS ('+bad.length+'):\n'+bad.join('\n'))
+                         : 'OK: nothing hidden, no broken images, H1 present');
+  return bad;
+})();
+```
+If `HIDDEN` items appear: you put `opacity:0` in the HTML/CSS, remove it (the reveal JS owns the hidden
+state, not the markup). If `BROKEN IMG` appears: apply the section 5.2 fallback. If `NO <h1>`: the page
+is missing its headline.
+
 ---
 
 ## 16. DEPLOYMENT (GitHub Pages, free)
@@ -997,6 +1093,22 @@ p{margin:0;color:var(--muted);}
 @media(max-width:780px){.gallery{columns:2;} .footer-top{font-size:34px;}}
 @media(max-width:520px){.gallery{columns:1;}}
 
+/* ---------- hover & micro-interactions (MUST be present, do not omit) ---------- */
+.card,.team-card,.testi-card{transition:transform .3s ease, box-shadow .3s ease;}
+.card:hover,.testi-card:hover{transform:translateY(-6px);box-shadow:0 30px 70px rgba(2,47,52,.18);}
+.card,.team-card,.story-slide{overflow:hidden;}
+.card img,.team-card img,.story-slide img{transition:transform .6s ease;}
+.card:hover img,.team-card:hover img{transform:scale(1.05);}
+.nav-links a{position:relative;}
+.nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-6px;height:2px;background:currentColor;transition:right .25s ease;}
+.nav-links a:hover::after{right:0;}
+a{transition:color .2s ease, opacity .2s ease;}
+.slider-arrow{transition:transform .2s ease, background .2s ease, color .2s ease;}
+.slider-arrow:hover{transform:translateY(-50%) scale(1.08);background:var(--primary-500);color:#fff;}
+.acc-head:hover{color:var(--primary-500);}
+.btn-light:hover{background:var(--primary-900);color:#fff;}
+.btn-light:hover .btn-arrow{background:#fff;color:var(--primary-900);}
+
 /* ---------- reduced motion ---------- */
 @media(prefers-reduced-motion:reduce){
   [data-reveal]{opacity:1!important;transform:none!important;}
@@ -1077,3 +1189,808 @@ Microcopy:
 - Keep the codebase free of any website-builder fingerprints and em dashes.
 
 End of one-shot prompt.
+
+---
+
+# ====================================================================================
+# 22. COMPLETE COPY-PASTE BUILD (full files, turnkey)
+# ====================================================================================
+
+Everything below is a complete, working reference implementation. An agent can write these files
+almost verbatim (swapping the PLACEHOLDERS and the per-page copy) and get a polished, animated, fully
+visible site. All of it obeys the Output Contract in section 0.5: content is visible by default,
+animations are progressive enhancement, images never break, and there is a self-verify gate.
+
+File map for this build:
+```
+index.html  about.html  service.html  blog.html
+privacy.html  terms.html  cookies.html  licenses.html  404.html
+.nojekyll  README.md
+assets/css/styles.css
+assets/js/app.js  (+ gsap.min.js, ScrollTrigger.min.js downloaded locally)
+assets/img/*       (gen_*.jpg or fallbacks; logo.svg, logo-light.svg, favicon.svg, webclip.png)
+```
+
+## 22.1 assets/js/app.js (COMPLETE — the entire behavior layer)
+
+Load order on every page, just before `</body>`:
+```html
+<script src="assets/js/gsap.min.js"></script>
+<script src="assets/js/ScrollTrigger.min.js"></script>
+<script src="assets/js/app.js"></script>
+```
+
+```js
+/* app.js — all site behavior. Failsafe: the page is fully usable even if this file never loads. */
+(function () {
+  'use strict';
+
+  /* 1) SCROLL REVEAL — visible by default; we only animate IN. immediateRender:false means a
+        misfired/late trigger leaves the element visible. A safety net force-shows stragglers. */
+  function reveals() {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!window.gsap || reduce) return;
+    var hasST = !!window.ScrollTrigger;
+    if (hasST) gsap.registerPlugin(ScrollTrigger);
+    gsap.utils.toArray('[data-reveal]').forEach(function (el) {
+      if (el.closest('.nav') || el.closest('.nav-links')) return;
+      gsap.from(el, {
+        opacity: 0, y: 40, duration: 0.9, ease: 'power2.out', immediateRender: false,
+        scrollTrigger: hasST ? { trigger: el, start: 'top 92%', once: true } : undefined
+      });
+    });
+    if (hasST) { window.addEventListener('load', function () { ScrollTrigger.refresh(); }); ScrollTrigger.refresh(); }
+    setTimeout(function () {
+      document.querySelectorAll('[data-reveal]').forEach(function (el) {
+        if (parseFloat(getComputedStyle(el).opacity) === 0) { el.style.opacity = '1'; el.style.transform = 'none'; }
+      });
+    }, 2500);
+  }
+
+  /* 2) ANIMATED COUNTERS — .stat-number "25+", "10k+", "4.9" count up, suffix preserved. */
+  function counters() {
+    if (!window.gsap || !window.ScrollTrigger) return;
+    gsap.utils.toArray('.stat-number').forEach(function (el) {
+      var raw = el.textContent.trim();
+      var target = parseFloat(raw.replace(/[^\d.]/g, '')) || 0;
+      var suffix = raw.replace(/[\d.,\s]/g, '');
+      gsap.from(el, {
+        textContent: 0, duration: 2, ease: 'power2.out', snap: { textContent: 1 }, immediateRender: false,
+        scrollTrigger: { trigger: el, start: 'top 88%', once: true },
+        onUpdate: function () { el.textContent = Math.ceil(this.targets()[0].textContent).toLocaleString() + suffix; }
+      });
+    });
+  }
+
+  /* 3) SLIDERS — drag + dots + arrows + autoplay. Works for any [data-slider]. */
+  function sliders() {
+    document.querySelectorAll('[data-slider]').forEach(function (root) {
+      var track = root.querySelector('.slider-track'); if (!track) return;
+      var slides = [].slice.call(track.children); var n = slides.length; if (!n) return;
+      var dotsWrap = root.querySelector('.slider-dots'); var i = 0;
+      function go(k) {
+        i = (k + n) % n; track.style.transform = 'translateX(-' + (i * 100) + '%)';
+        if (dotsWrap) [].forEach.call(dotsWrap.children, function (d, j) { d.className = j === i ? 'dot active' : 'dot'; });
+      }
+      if (dotsWrap) slides.forEach(function (_, j) {
+        var b = document.createElement('button'); b.className = 'dot';
+        b.setAttribute('aria-label', 'Go to slide ' + (j + 1)); b.onclick = function () { go(j); };
+        dotsWrap.appendChild(b);
+      });
+      var p = root.querySelector('.slider-prev'), nx = root.querySelector('.slider-next');
+      if (p) p.onclick = function () { go(i - 1); }; if (nx) nx.onclick = function () { go(i + 1); };
+      var sx = 0, drag = false;
+      root.addEventListener('pointerdown', function (e) { drag = true; sx = e.clientX; });
+      window.addEventListener('pointerup', function (e) {
+        if (!drag) return; drag = false; var dx = e.clientX - sx; if (Math.abs(dx) > 50) go(dx < 0 ? i + 1 : i - 1);
+      });
+      var auto = setInterval(function () { go(i + 1); }, 6000);
+      root.addEventListener('mouseenter', function () { clearInterval(auto); });
+      go(0);
+    });
+  }
+
+  /* 4) ACCORDION — one open at a time. */
+  function accordions() {
+    document.querySelectorAll('.acc-head').forEach(function (h) {
+      h.addEventListener('click', function () {
+        var item = h.closest('.acc-item'); var wasOpen = item.classList.contains('open');
+        var group = item.parentElement;
+        group.querySelectorAll('.acc-item.open').forEach(function (x) { x.classList.remove('open'); });
+        if (!wasOpen) item.classList.add('open');
+      });
+    });
+  }
+
+  /* 5) HERO BACKGROUND CAROUSEL — crossfade .hero-carousel-img every 5s. */
+  function carousel() {
+    var im = document.querySelectorAll('.hero-carousel-img'); if (im.length < 2) return;
+    var i = 0; setInterval(function () {
+      im[i].classList.remove('is-active'); i = (i + 1) % im.length; im[i].classList.add('is-active');
+    }, 5000);
+  }
+
+  /* 6) MOBILE NAV — hamburger toggles the menu sheet. */
+  function mobileNav() {
+    var t = document.querySelector('.nav-toggle'); var m = document.querySelector('.nav-links');
+    if (t && m) t.addEventListener('click', function () {
+      var open = m.classList.toggle('open'); t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
+  /* 7) LEAD FORM — opens a prefilled WhatsApp message, shows success state. Global for inline onsubmit. */
+  window.leadSubmit = function (e) {
+    e.preventDefault(); var f = e.target;
+    var name = (f.querySelector('[name="name"]').value || '').trim();
+    var phone = (f.querySelector('[name="phone"]').value || '').trim();
+    if (!name || !phone) return false;
+    var msg = encodeURIComponent("Hi [BUSINESS_NAME], I'm " + name + ". Please call me back at " + phone + ".");
+    try { window.open('https://wa.me/[WHATSAPP_NUMBER]?text=' + msg, '_blank'); } catch (_) {}
+    var c = f.closest('.lead-form_card');
+    if (c) {
+      f.style.display = 'none';
+      var h = c.querySelector('.lead-form_head'); if (h) h.style.display = 'none';
+      var ok = c.querySelector('.lead-form_success'); if (ok) ok.style.display = 'block';
+    }
+    return false;
+  };
+
+  /* 8) IMAGE FALLBACK GUARD — if any image 404s, swap to a generic photo so nothing breaks. */
+  function imgGuard() {
+    document.querySelectorAll('img').forEach(function (im) {
+      im.addEventListener('error', function () {
+        if (im.dataset.fbk) return; im.dataset.fbk = '1';
+        im.src = 'https://picsum.photos/seed/' + encodeURIComponent((im.alt || 'image').slice(0, 24)) + '/1280/720';
+      });
+    });
+  }
+
+  function init() { reveals(); counters(); sliders(); accordions(); carousel(); mobileNav(); imgGuard(); }
+  document.readyState !== 'loading' ? init() : document.addEventListener('DOMContentLoaded', init);
+})();
+```
+
+## 22.2 assets/css/styles.css (COMPLETE — tokens + base + every component + hover + responsive)
+
+This is the entire stylesheet. Paste as-is; swap `[ACCENT]`/`[INK_DARK]` only if you are not using the
+default teal. Everything is driven by `--primary-*` so the blue variant is a token swap.
+
+```css
+:root{
+  --font:'Sora','Helvetica Neue',Arial,sans-serif;
+  --primary-100:#eaf2ff; --primary-200:#d6e6ff; --primary-300:#a9c9ff;
+  --primary-400:#587d81; --primary-500:#24a3b1; --primary-600:#1c91a1;
+  --primary-700:#022f34; --primary-800:#002124; --primary-900:#011f23;
+  --ink:#011f23; --muted:#5d6c7b; --bg:#fafafa; --bg-tint:#e2f1f3; --line:#e4e8ea; --white:#fff;
+  --radius-card:18px; --radius-input:12px; --radius-pill:999px;
+  --shadow-soft:0 18px 50px rgba(2,47,52,.10); --shadow-card:0 24px 60px rgba(2,47,52,.12);
+  --shadow-float:0 28px 70px rgba(2,47,52,.30);
+  --maxw:1240px; --section-pad:clamp(64px,9vw,120px);
+}
+*,*::before,*::after{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;font-family:var(--font);color:var(--ink);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased;}
+img{max-width:100%;display:block;}
+a{color:inherit;text-decoration:none;transition:color .2s ease,opacity .2s ease;}
+h1,h2,h3,h4{margin:0;font-weight:600;line-height:1.08;letter-spacing:-1px;color:var(--ink);}
+h1{font-size:clamp(48px,7vw,96px);line-height:1.02;letter-spacing:-2px;}
+h2{font-size:clamp(32px,5vw,64px);}
+p{margin:0;color:var(--muted);}
+:focus-visible{outline:2px solid var(--primary-500);outline-offset:2px;border-radius:4px;}
+.container{max-width:var(--maxw);margin:0 auto;padding-inline:clamp(20px,5vw,40px);}
+.section{padding-block:var(--section-pad);}
+.section.tint{background:var(--bg-tint);}
+.lead{font-size:clamp(16px,1.4vw,18px);color:var(--muted);max-width:62ch;}
+.text-accent{color:var(--primary-500);}
+.center{text-align:center;} .mx-auto{margin-inline:auto;}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:14px;padding:13px 16px 13px 26px;border:none;cursor:pointer;
+  border-radius:var(--radius-pill);font:500 15px var(--font);transition:transform .15s ease,background .2s ease,color .2s ease;}
+.btn-arrow{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;font-size:13px;transition:transform .2s ease,background .2s ease,color .2s ease;}
+.btn:hover{transform:translateY(-1px);} .btn:hover .btn-arrow{transform:rotate(45deg);}
+.btn-primary{background:var(--primary-900);color:#fff;} .btn-primary .btn-arrow{background:var(--primary-500);color:#fff;}
+.btn-light{background:#fff;color:var(--ink);border:1px solid var(--line);} .btn-light .btn-arrow{background:var(--primary-900);color:#fff;}
+.btn-light:hover{background:var(--primary-900);color:#fff;} .btn-light:hover .btn-arrow{background:#fff;color:var(--primary-900);}
+
+/* navbar */
+.nav{position:absolute;top:0;left:0;right:0;z-index:50;}
+.nav-inner{max-width:var(--maxw);margin:0 auto;padding:22px clamp(20px,5vw,40px);display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.nav-links{display:flex;align-items:center;gap:28px;}
+.nav-links a{color:#f3f6ff;font-size:15px;position:relative;}
+.nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-6px;height:2px;background:currentColor;transition:right .25s ease;}
+.nav-links a:hover::after{right:0;}
+.nav-dropdown{position:relative;}
+.nav-dropdown-toggle{color:#f3f6ff;font:400 15px var(--font);background:none;border:none;cursor:pointer;}
+.nav-dropdown-list{position:absolute;top:140%;left:0;min-width:180px;background:#fff;border-radius:14px;box-shadow:var(--shadow-card);padding:10px;display:none;}
+.nav-dropdown:hover .nav-dropdown-list{display:block;}
+.nav-dropdown-list a{display:block;color:var(--ink);padding:9px 12px;border-radius:8px;}
+.nav-dropdown-list a:hover{background:var(--bg-tint);}
+.nav-toggle{display:none;background:none;border:none;color:#fff;font-size:26px;cursor:pointer;}
+@media(max-width:880px){
+  .nav-links{position:fixed;inset:64px 0 auto 0;flex-direction:column;align-items:flex-start;gap:6px;background:var(--primary-900);padding:20px clamp(20px,5vw,40px);display:none;}
+  .nav-links.open{display:flex;}
+  .nav-toggle{display:block;}
+}
+
+/* hero */
+.hero{position:relative;min-height:92vh;display:flex;align-items:center;color:#fff;overflow:hidden;padding-block:104px 40px;}
+.hero-bg-wrap{position:absolute;inset:0;z-index:0;overflow:hidden;}
+.hero-bg-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.hero-carousel-img{opacity:0;transition:opacity 1.4s ease;} .hero-carousel-img.is-active{opacity:1;}
+.hero::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(1,31,35,.74),rgba(1,31,35,.20));}
+.hero .container{position:relative;z-index:2;width:100%;}
+.hero h1{color:#fff;max-width:16ch;}
+.hero .lead{color:rgba(255,255,255,.88);margin:18px 0 26px;}
+
+/* eyebrow pill */
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;margin-bottom:16px;border-radius:var(--radius-pill);
+  background:rgba(2,47,52,.06);color:var(--primary-700);font-size:14px;font-weight:500;}
+.eyebrow svg{color:var(--primary-500);}
+.on-dark .eyebrow{background:rgba(255,255,255,.14);color:#fff;} .on-dark .eyebrow svg{color:#fff;}
+
+/* section header */
+.sec-head{max-width:720px;margin:0 auto;text-align:center;}
+.sec-head .lead{margin:14px auto 0;}
+
+/* card grids */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin-top:44px;}
+.card{background:#fff;border-radius:var(--radius-card);box-shadow:var(--shadow-card);overflow:hidden;transition:transform .3s ease,box-shadow .3s ease;}
+.card:hover{transform:translateY(-6px);box-shadow:0 30px 70px rgba(2,47,52,.18);}
+.card img{aspect-ratio:4/3;object-fit:cover;width:100%;transition:transform .6s ease;}
+.card:hover img{transform:scale(1.05);}
+.card-body{padding:22px;} .card h3{font-size:21px;margin-bottom:8px;} .card p{font-size:15px;}
+
+/* split (text + image) */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.split img{border-radius:var(--radius-card);width:100%;object-fit:cover;aspect-ratio:4/3;}
+@media(max-width:860px){.split{grid-template-columns:1fr;}}
+
+/* team */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin-top:44px;}
+.team-card{position:relative;border-radius:var(--radius-card);overflow:hidden;}
+.team-card img{aspect-ratio:3/4;object-fit:cover;width:100%;transition:transform .6s ease;}
+.team-card:hover img{transform:scale(1.05);}
+.team-card .name-plate{position:absolute;left:16px;right:16px;bottom:16px;background:#fff;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
+.team-card .name-plate b{font-size:17px;color:var(--ink);} .team-card .name-plate span{display:block;color:var(--muted);font-size:13px;}
+
+/* slider */
+.slider{position:relative;margin-top:44px;}
+.slider-viewport{overflow:hidden;border-radius:var(--radius-card);}
+.slider-track{display:flex;transition:transform .55s cubic-bezier(.22,.61,.36,1);}
+.slide{min-width:100%;}
+.story-slide{position:relative;aspect-ratio:16/10;border-radius:var(--radius-card);overflow:hidden;}
+.story-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.story-slide .overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(1,31,35,.88));}
+.story-slide .meta{position:absolute;left:24px;right:24px;bottom:24px;color:#fff;}
+.story-slide .metric{font-size:clamp(32px,4vw,44px);font-weight:600;}
+.slider-arrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:999px;border:none;background:#fff;color:var(--ink);font-size:20px;cursor:pointer;box-shadow:var(--shadow-soft);z-index:3;transition:transform .2s ease,background .2s ease,color .2s ease;}
+.slider-arrow:hover{transform:translateY(-50%) scale(1.08);background:var(--primary-500);color:#fff;}
+.slider-prev{left:-10px;} .slider-next{right:-10px;}
+.slider-dots{display:flex;justify-content:center;gap:8px;margin-top:20px;}
+.slider-dots .dot{width:8px;height:8px;border-radius:999px;border:none;background:#cfd8da;cursor:pointer;transition:width .2s,background .2s;}
+.slider-dots .dot.active{width:26px;background:var(--primary-500);}
+
+/* testimonial card (with photo bg + overlay option) */
+.testi-card{position:relative;border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:44px;text-align:center;max-width:700px;margin:0 auto;overflow:hidden;background:#fff;}
+.testi-card.has-bg{color:#fff;background-image:linear-gradient(160deg,rgba(2,47,52,.86),rgba(28,150,165,.80)),var(--testi-bg);background-size:cover;background-position:center;}
+.testi-card.has-bg .quote,.testi-card.has-bg .who{color:#fff;} .testi-card.has-bg .role{color:rgba(255,255,255,.82);}
+.testi-card img{width:84px;height:84px;border-radius:999px;object-fit:cover;margin:0 auto 16px;}
+.testi-card .quote{font-size:clamp(18px,2vw,24px);font-weight:500;line-height:1.5;color:var(--ink);}
+.testi-card .who{margin-top:16px;font-weight:600;} .testi-card .role{color:var(--muted);font-size:14px;}
+
+/* accordion */
+.acc-item{border-bottom:1px solid var(--line);}
+.acc-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0;cursor:pointer;font-size:clamp(18px,2vw,22px);font-weight:600;transition:color .2s ease;}
+.acc-head:hover{color:var(--primary-500);}
+.acc-head .plus{flex:none;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);display:grid;place-items:center;transition:transform .2s,background .2s,color .2s;}
+.acc-item.open .plus{transform:rotate(45deg);background:var(--primary-900);color:#fff;border-color:var(--primary-900);}
+.acc-body{max-height:0;overflow:hidden;transition:max-height .3s ease;color:var(--muted);}
+.acc-item.open .acc-body{max-height:260px;padding-bottom:22px;}
+
+/* stats */
+.stats{display:flex;gap:48px;flex-wrap:wrap;}
+.stat-number{font-size:clamp(40px,6vw,72px);font-weight:600;color:var(--primary-500);letter-spacing:-2px;}
+.stat-label{color:var(--muted);font-size:15px;}
+
+/* gallery */
+.gallery{columns:3;column-gap:18px;margin-top:44px;}
+.gallery img{width:100%;border-radius:var(--radius-card);margin-bottom:18px;break-inside:avoid;}
+
+/* closing CTA (photo) */
+.cta{position:relative;color:#fff;text-align:center;background-size:cover;background-position:center;
+  background-image:linear-gradient(115deg,rgba(1,31,35,.93),rgba(1,31,35,.72)),var(--cta-bg);}
+.cta h2{color:#fff;max-width:18ch;margin:14px auto;} .cta .lead{color:rgba(255,255,255,.86);margin:0 auto 28px;}
+
+/* footer */
+.footer{background:var(--primary-900);color:#cdd8da;border-top:3px solid var(--primary-500);padding-block:64px 28px;}
+.footer a{color:#cdd8da;} .footer a:hover{color:#fff;}
+.footer-top{display:flex;flex-wrap:wrap;gap:8px 48px;font-size:clamp(28px,5vw,56px);font-weight:600;color:#fff;letter-spacing:-1px;}
+.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px;margin:48px 0;}
+.footer-col h4{color:#fff;font-size:16px;margin:0 0 16px;} .footer-col a{display:block;margin:10px 0;}
+.footer-bottom{display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.12);padding-top:24px;font-size:14px;}
+@media(max-width:780px){.footer-grid{grid-template-columns:1fr 1fr;} .footer-bottom{flex-direction:column;gap:8px;} .gallery{columns:2;}}
+@media(max-width:520px){.gallery{columns:1;}}
+
+/* lead form */
+.lead-form_card{margin-top:24px;max-width:430px;background:#fff;border-radius:20px;padding:24px 24px 20px;box-shadow:var(--shadow-float);}
+.lead-form_title{font-size:21px;font-weight:600;color:var(--primary-900);letter-spacing:-.4px;}
+.lead-form_sub{font-size:14px;color:var(--muted);margin-top:3px;}
+.lead-form{display:flex;flex-direction:column;gap:11px;margin-top:16px;}
+.lead-form_input{height:50px;border:1px solid var(--line);border-radius:var(--radius-input);padding:0 16px;font:15px var(--font);color:var(--ink);background:#fafcfc;outline:none;transition:border-color .2s,background .2s;}
+.lead-form_input:focus{border-color:var(--primary-500);background:#fff;}
+.lead-form_btn{height:52px;border:none;border-radius:var(--radius-pill);background:var(--primary-900);color:#fff;font:600 15px var(--font);cursor:pointer;transition:transform .15s,background .2s;}
+.lead-form_btn:hover{background:var(--primary-500);transform:translateY(-1px);}
+.lead-form_note{font-size:12px;color:#9aa6ad;text-align:center;}
+
+/* reduced motion */
+@media(prefers-reduced-motion:reduce){ [data-reveal]{opacity:1!important;transform:none!important;} *{scroll-behavior:auto!important;} }
+```
+
+## 22.3 Shared partials (use the SAME nav and footer on every page)
+
+NAV (paste at the top of `<body>` on every page; on light pages add `class="nav on-dark-false"` is not
+needed, the nav is always over a hero or tinted top so white text is fine; if a page has a light top,
+give the hero a dark image or tinted background so the white nav stays readable):
+```html
+<header class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo" aria-label="[BUSINESS_NAME] home">
+      <img src="assets/img/logo-light.svg" alt="[BUSINESS_NAME] logo" height="30"/>
+    </a>
+    <button class="nav-toggle" aria-label="Menu" aria-expanded="false">&#9776;</button>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="about.html">About Us</a>
+      <a href="service.html">Services</a>
+      <a href="blog.html">Blog</a>
+      <div class="nav-dropdown">
+        <button class="nav-dropdown-toggle">Pages</button>
+        <div class="nav-dropdown-list">
+          <a href="about.html">About</a><a href="service.html">Services</a><a href="blog.html">Blog</a>
+          <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
+          <a href="cookies.html">Cookies</a><a href="licenses.html">Licenses</a>
+        </div>
+      </div>
+    </nav>
+    <a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-light">
+      <span class="btn-text">Get Appointment</span>
+      <span class="btn-arrow" aria-hidden="true">&#8599;</span>
+    </a>
+  </div>
+</header>
+```
+
+EYEBROW (reuse anywhere a small label sits above a heading):
+```html
+<span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+  <path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/>
+</svg> LABEL</span>
+```
+
+FOOTER (paste before `</body>` on every page, above the scripts):
+```html
+<footer class="footer"><div class="container">
+  <div class="footer-top">
+    <a href="tel:[PHONE_TEL]">[PHONE_DISPLAY]</a>
+    <a href="mailto:[EMAIL]">[EMAIL]</a>
+  </div>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <img src="assets/img/logo-light.svg" alt="[BUSINESS_NAME] logo" height="30"/>
+      <p style="margin:16px 0 20px;max-width:34ch;">Advanced technology, a caring team, and treatments designed to keep your smile healthy for life.</p>
+      <a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-light"><span class="btn-text">Get Appointment</span><span class="btn-arrow">&#8599;</span></a>
+    </div>
+    <div class="footer-col"><h4>Navigation</h4><a href="index.html">Home</a><a href="about.html">About</a><a href="service.html">Services</a><a href="blog.html">Blog</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies</a><a href="licenses.html">Licenses</a><a href="404.html">404</a></div>
+    <div class="footer-col"><h4>Follow us</h4><a href="#" aria-label="Facebook">Facebook</a><a href="#" aria-label="X">X</a><a href="#" aria-label="LinkedIn">LinkedIn</a><a href="#" aria-label="Instagram">Instagram</a></div>
+  </div>
+  <div class="footer-bottom"><span>&copy; 2026 [BUSINESS_NAME]. [CREDIT]</span><span>&copy; 2026 [BUSINESS_NAME] &middot; <a href="privacy.html">Privacy Policy</a></span></div>
+</div></footer>
+```
+
+SCRIPTS (every page, immediately before `</body>`, after the footer):
+```html
+<script src="assets/js/gsap.min.js"></script>
+<script src="assets/js/ScrollTrigger.min.js"></script>
+<script src="assets/js/app.js"></script>
+```
+
+## 22.4 index.html (COMPLETE)
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>[BUSINESS_NAME] | [TAGLINE]</title>
+  <meta name="description" content="[BUSINESS_NAME] is a modern dental clinic offering gentle, expert care, from preventive checkups and cosmetic dentistry to restorative treatments and orthodontics. Book your visit today."/>
+  <meta property="og:title" content="[BUSINESS_NAME] | [TAGLINE]"/>
+  <meta property="og:description" content="Gentle, modern dental care for every generation. Book your visit today."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="assets/img/gen_hero.jpg"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="assets/css/styles.css" rel="stylesheet"/>
+  <link href="assets/img/favicon.svg" rel="shortcut icon" type="image/svg+xml"/>
+  <link href="assets/img/webclip.png" rel="apple-touch-icon"/>
+</head>
+<body>
+
+  <!-- NAV (from 22.3) -->
+  <header class="nav"><div class="nav-inner">
+    <a href="index.html" class="nav-logo" aria-label="[BUSINESS_NAME] home"><img src="assets/img/logo-light.svg" alt="[BUSINESS_NAME] logo" height="30"/></a>
+    <button class="nav-toggle" aria-label="Menu" aria-expanded="false">&#9776;</button>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="index.html">Home</a><a href="about.html">About Us</a><a href="service.html">Services</a><a href="blog.html">Blog</a>
+      <div class="nav-dropdown"><button class="nav-dropdown-toggle">Pages</button>
+        <div class="nav-dropdown-list"><a href="about.html">About</a><a href="service.html">Services</a><a href="blog.html">Blog</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="cookies.html">Cookies</a><a href="licenses.html">Licenses</a></div></div>
+    </nav>
+    <a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-light"><span class="btn-text">Get Appointment</span><span class="btn-arrow">&#8599;</span></a>
+  </div></header>
+
+  <!-- HERO (carousel bg + content + lead form). H1 is visible by default; NO opacity:0. -->
+  <section class="hero">
+    <div class="hero-bg-wrap">
+      <img class="hero-carousel-img is-active" src="assets/img/gen_hero.jpg" alt="Dental care"/>
+      <img class="hero-carousel-img" src="assets/img/gen_hero-2.jpg" alt="Modern clinic"/>
+      <img class="hero-carousel-img" src="assets/img/gen_hero-3.jpg" alt="Bright smile"/>
+    </div>
+    <div class="container">
+      <h1>Trusted Dental Care for Every Generation</h1>
+      <p class="lead">We combine modern technology with heartfelt service to care for every generation.</p>
+      <a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-light"><span class="btn-text">Book Appointment</span><span class="btn-arrow">&#8599;</span></a>
+      <div class="lead-form_card">
+        <div class="lead-form_head">
+          <div class="lead-form_title">Book a visit</div>
+          <div class="lead-form_sub">Get a callback within 10 minutes</div>
+        </div>
+        <form class="lead-form" onsubmit="return leadSubmit(event)">
+          <input class="lead-form_input" type="text" name="name" placeholder="Your name" required/>
+          <input class="lead-form_input" type="tel" name="phone" placeholder="Phone number" required/>
+          <button class="lead-form_btn" type="submit">Request a callback</button>
+          <div class="lead-form_note">No spam. A real person calls you back, fast.</div>
+        </form>
+        <div class="lead-form_success" style="display:none">
+          <div class="lead-form_title">Thanks! You're all set.</div>
+          <div class="lead-form_sub">Our team will call you within 10 minutes.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OUR STORY SLIDER -->
+  <section class="section"><div class="container">
+    <div class="sec-head" data-reveal>
+      <span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Our Story</span>
+      <h2>Redefining Dental Care with Trust and Innovation</h2>
+    </div>
+    <div class="slider" data-slider data-reveal>
+      <button class="slider-arrow slider-prev" aria-label="Previous">&#8249;</button>
+      <div class="slider-viewport"><div class="slider-track">
+        <div class="slide"><div class="story-slide"><img src="assets/img/gen_story-1.jpg" alt="Comfort and care"/><div class="overlay"></div><div class="meta"><div class="metric">92%</div><b>Comfort &amp; Care</b><p style="color:rgba(255,255,255,.85)">Patients feel less anxious during visits with us.</p></div></div></div>
+        <div class="slide"><div class="story-slide"><img src="assets/img/gen_story-2.jpg" alt="Trusted by community"/><div class="overlay"></div><div class="meta"><div class="metric">3/4</div><b>Trusted by Community</b><p style="color:rgba(255,255,255,.85)">New patients come from word-of-mouth referrals.</p></div></div></div>
+        <div class="slide"><div class="story-slide"><img src="assets/img/gen_story-3.jpg" alt="Quick and accessible"/><div class="overlay"></div><div class="meta"><div class="metric">7 Min</div><b>Quick &amp; Accessible</b><p style="color:rgba(255,255,255,.85)">Average wait time before you are seen.</p></div></div></div>
+        <div class="slide"><div class="story-slide"><img src="assets/img/gen_story-4.jpg" alt="Emergency support"/><div class="overlay"></div><div class="meta"><div class="metric">24/7</div><b>Emergency Support</b><p style="color:rgba(255,255,255,.85)">Sudden pain or injury? Our team is here for you.</p></div></div></div>
+      </div></div>
+      <button class="slider-arrow slider-next" aria-label="Next">&#8250;</button>
+      <div class="slider-dots"></div>
+    </div>
+  </div></section>
+
+  <!-- VALUE / WHY US -->
+  <section class="section tint"><div class="container split">
+    <div data-reveal>
+      <span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Why [SHORT_NAME]</span>
+      <h2>Care You Can <span class="text-accent">Trust</span></h2>
+      <p class="lead" style="margin:16px 0 26px;">At [SHORT_NAME], we combine expertise, compassion, and modern technology to create a dental experience that patients truly value.</p>
+      <a href="about.html" class="btn btn-primary"><span class="btn-text">Learn More</span><span class="btn-arrow">&#8599;</span></a>
+    </div>
+    <img src="assets/img/gen_value.jpg" alt="Dentist explaining a treatment plan" data-reveal/>
+  </div></section>
+
+  <!-- SERVICES OVERVIEW -->
+  <section class="section"><div class="container">
+    <div class="sec-head" data-reveal>
+      <span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Our Services</span>
+      <h2>Comprehensive Dental Care for Every Smile</h2>
+    </div>
+    <div class="card-grid">
+      <a class="card" href="service.html" data-reveal><img src="assets/img/gen_service-1.jpg" alt="Preventive dentistry"/><div class="card-body"><h3>Preventive dentistry</h3><p>Routine checkups and cleanings that keep problems away.</p></div></a>
+      <a class="card" href="service.html" data-reveal><img src="assets/img/gen_service-2.jpg" alt="Cosmetic dentistry"/><div class="card-body"><h3>Cosmetic dentistry</h3><p>Whitening, veneers, and smile makeovers.</p></div></a>
+      <a class="card" href="service.html" data-reveal><img src="assets/img/gen_service-3.jpg" alt="Restorative treatments"/><div class="card-body"><h3>Restorative treatments</h3><p>Fillings, crowns, and implants to restore your smile.</p></div></a>
+      <a class="card" href="service.html" data-reveal><img src="assets/img/gen_service-4.jpg" alt="Orthodontics"/><div class="card-body"><h3>Orthodontics</h3><p>Modern braces and clear aligners for a straighter bite.</p></div></a>
+    </div>
+  </div></section>
+
+  <!-- TEAM -->
+  <section class="section tint"><div class="container">
+    <div class="sec-head" data-reveal>
+      <span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Our Team</span>
+      <h2>Our <span class="text-accent">Experts</span> in Oral Health</h2>
+      <p class="lead">Each member of our clinical staff is highly qualified and deeply passionate about helping patients achieve healthier smiles.</p>
+    </div>
+    <div class="team-grid">
+      <div class="team-card" data-reveal><img src="assets/img/gen_team-1.jpg" alt="Dr. Olivia Thompson"/><div class="name-plate"><span><b>Dr. Olivia Thompson</b>Pediatric Dentist</span></div></div>
+      <div class="team-card" data-reveal><img src="assets/img/gen_team-2.jpg" alt="Dr. Marcus Reed"/><div class="name-plate"><span><b>Dr. Marcus Reed</b>General Dentist</span></div></div>
+      <div class="team-card" data-reveal><img src="assets/img/gen_team-4.jpg" alt="Dr. Emman Collins"/><div class="name-plate"><span><b>Dr. Emman Collins</b>Implant Specialist</span></div></div>
+    </div>
+  </div></section>
+
+  <!-- TESTIMONIALS -->
+  <section class="section"><div class="container">
+    <div class="sec-head" data-reveal>
+      <span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Testimonials</span>
+      <h2>Voices of <span class="text-accent">Trust and Care</span></h2>
+    </div>
+    <div class="slider" data-slider data-reveal>
+      <button class="slider-arrow slider-prev" aria-label="Previous">&#8249;</button>
+      <div class="slider-viewport"><div class="slider-track">
+        <div class="slide"><div class="testi-card"><img src="assets/img/gen_testi-1.jpg" alt="Kristin Watson"/><p class="quote">I have always been nervous about the dentist, but [SHORT_NAME] changed everything. The staff is warm and the care is exceptional.</p><div class="who">Kristin Watson</div><div class="role">Business Owner</div></div></div>
+        <div class="slide"><div class="testi-card"><img src="assets/img/gen_testi-2.jpg" alt="Marcus Lee"/><p class="quote">Booking was effortless and the callback came in minutes. Best dental experience I have had.</p><div class="who">Marcus Lee</div><div class="role">Teacher</div></div></div>
+        <div class="slide"><div class="testi-card"><img src="assets/img/gen_testi-3.jpg" alt="Aisha Rahman"/><p class="quote">Gentle, modern, and genuinely caring. My whole family comes here now.</p><div class="who">Aisha Rahman</div><div class="role">Designer</div></div></div>
+      </div></div>
+      <button class="slider-arrow slider-next" aria-label="Next">&#8250;</button>
+      <div class="slider-dots"></div>
+    </div>
+  </div></section>
+
+  <!-- CLOSING CTA (photo). Set --cta-bg to a real image. -->
+  <section class="cta on-dark" style="--cta-bg:url('assets/img/gen_about-hero.jpg')"><div class="container">
+    <span class="eyebrow" data-reveal><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Get In Touch</span>
+    <h2 data-reveal>Let's Talk Teeth, We're <span class="text-accent">Just a Smile Away</span></h2>
+    <p class="lead" data-reveal>Your health journey starts with one simple step, we are here to guide you.</p>
+    <a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-light" data-reveal><span class="btn-text">Get Started</span><span class="btn-arrow">&#8599;</span></a>
+  </div></section>
+
+  <!-- FOOTER (from 22.3) -->
+  <footer class="footer"><div class="container">
+    <div class="footer-top"><a href="tel:[PHONE_TEL]">[PHONE_DISPLAY]</a><a href="mailto:[EMAIL]">[EMAIL]</a></div>
+    <div class="footer-grid">
+      <div class="footer-brand"><img src="assets/img/logo-light.svg" alt="[BUSINESS_NAME] logo" height="30"/><p style="margin:16px 0 20px;max-width:34ch;">Advanced technology, a caring team, and treatments designed to keep your smile healthy for life.</p><a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-light"><span class="btn-text">Get Appointment</span><span class="btn-arrow">&#8599;</span></a></div>
+      <div class="footer-col"><h4>Navigation</h4><a href="index.html">Home</a><a href="about.html">About</a><a href="service.html">Services</a><a href="blog.html">Blog</a></div>
+      <div class="footer-col"><h4>Legal</h4><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies</a><a href="licenses.html">Licenses</a><a href="404.html">404</a></div>
+      <div class="footer-col"><h4>Follow us</h4><a href="#" aria-label="Facebook">Facebook</a><a href="#" aria-label="X">X</a><a href="#" aria-label="LinkedIn">LinkedIn</a><a href="#" aria-label="Instagram">Instagram</a></div>
+    </div>
+    <div class="footer-bottom"><span>&copy; 2026 [BUSINESS_NAME]. [CREDIT]</span><span>&copy; 2026 [BUSINESS_NAME] &middot; <a href="privacy.html">Privacy Policy</a></span></div>
+  </div></footer>
+
+  <script src="assets/js/gsap.min.js"></script>
+  <script src="assets/js/ScrollTrigger.min.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
+```
+
+## 22.5 about.html / service.html / blog.html (COMPLETE)
+
+Each page reuses the SAME `<head>` block (swap title + description), the SAME nav (22.3), the SAME
+footer (22.3), and the SAME three script tags. Only the `<main>` content differs and is given in full
+below. Every section that should animate carries `data-reveal`; nothing starts at opacity 0.
+
+### about.html `<main>`
+```html
+<section class="hero" style="min-height:auto;padding-block:160px 80px;">
+  <div class="hero-bg-wrap"><img class="hero-carousel-img is-active" src="assets/img/gen_about-hero.jpg" alt="Our dental team"/></div>
+  <div class="container" style="display:grid;grid-template-columns:1.3fr .7fr;gap:40px;align-items:center;">
+    <div>
+      <span class="eyebrow on-dark" style="background:rgba(255,255,255,.14);color:#fff;"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="#fff"/></svg> About Us</span>
+      <h1>Trusted Dental Experts, Decades of Care</h1>
+      <p class="lead">At [SHORT_NAME], we combine compassion, innovation, and expertise to provide care you can trust. Your smile is our mission, and your comfort is our priority.</p>
+      <a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-light"><span class="btn-text">Book An Appointment</span><span class="btn-arrow">&#8599;</span></a>
+    </div>
+    <div class="stats" style="flex-direction:column;color:#fff;">
+      <div><div class="stat-number" style="color:#fff;">25+</div><div class="stat-label" style="color:rgba(255,255,255,.8)">Years of Dental Excellence</div></div>
+      <div><div class="stat-number" style="color:#fff;">10k+</div><div class="stat-label" style="color:rgba(255,255,255,.8)">Smiles Transformed</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section"><div class="container split">
+  <div data-reveal>
+    <span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Our Story</span>
+    <h2>Innovation in Dental Wellness, for Over Two Decades</h2>
+    <p class="lead" style="margin:16px 0 26px;">[SHORT_NAME] has been dedicated to improving lives through healthier smiles. From humble beginnings to a trusted name in dental care, our mission has never changed.</p>
+    <a href="service.html" class="btn btn-primary"><span class="btn-text">Learn More</span><span class="btn-arrow">&#8599;</span></a>
+  </div>
+  <img src="assets/img/gen_gallery-1.jpg" alt="Inside our clinic" data-reveal/>
+</div></section>
+
+<section class="section tint"><div class="container">
+  <div class="sec-head" data-reveal><span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Our Numbers</span><h2>Quick facts that highlight our impact</h2></div>
+  <div class="card-grid">
+    <div class="card" data-reveal><div class="card-body center"><div class="stat-number">50k+</div><div class="stat-label">Patient Visits</div></div></div>
+    <div class="card" data-reveal><div class="card-body center"><div class="stat-number">4.9</div><div class="stat-label">Google Rating</div></div></div>
+    <div class="card" data-reveal><div class="card-body center"><div class="stat-number">98%</div><div class="stat-label">Would Recommend</div></div></div>
+    <div class="card" data-reveal><div class="card-body center"><div class="stat-number">15+</div><div class="stat-label">Specialists</div></div></div>
+  </div>
+</div></section>
+
+<section class="section"><div class="container">
+  <div class="sec-head" data-reveal><span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Our Team</span><h2>Meet the people behind your smile</h2></div>
+  <div class="team-grid">
+    <div class="team-card" data-reveal><img src="assets/img/gen_team-1.jpg" alt="Dr. Olivia Thompson"/><div class="name-plate"><span><b>Dr. Olivia Thompson</b>Pediatric Dentist</span></div></div>
+    <div class="team-card" data-reveal><img src="assets/img/gen_team-2.jpg" alt="Dr. Marcus Reed"/><div class="name-plate"><span><b>Dr. Marcus Reed</b>General Dentist</span></div></div>
+    <div class="team-card" data-reveal><img src="assets/img/gen_team-3.jpg" alt="Dr. Hana Park"/><div class="name-plate"><span><b>Dr. Hana Park</b>Hygienist</span></div></div>
+    <div class="team-card" data-reveal><img src="assets/img/gen_team-4.jpg" alt="Dr. Emman Collins"/><div class="name-plate"><span><b>Dr. Emman Collins</b>Implant Specialist</span></div></div>
+    <div class="team-card" data-reveal><img src="assets/img/gen_team-5.jpg" alt="Dr. Sam Ortiz"/><div class="name-plate"><span><b>Dr. Sam Ortiz</b>Orthodontist</span></div></div>
+    <div class="team-card" data-reveal><img src="assets/img/gen_team-6.jpg" alt="Dr. Lena Fields"/><div class="name-plate"><span><b>Dr. Lena Fields</b>Cosmetic Dentist</span></div></div>
+  </div>
+</div></section>
+
+<!-- reuse the index closing CTA section here -->
+```
+
+### service.html `<main>`
+```html
+<section class="hero tint" style="min-height:auto;padding-block:160px 80px;color:var(--ink);">
+  <div class="container center" style="max-width:760px;">
+    <span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> Our Services</span>
+    <h1 style="color:var(--ink);">Comprehensive Dental Care for You</h1>
+    <p class="lead mx-auto">From routine checkups to advanced cosmetic and restorative work, we offer the full range of dental care under one calm, modern roof.</p>
+    <p style="margin-top:26px;"><a href="[BOOKING_URL]" target="_blank" rel="noopener" class="btn btn-primary"><span class="btn-text">Book An Appointment</span><span class="btn-arrow">&#8599;</span></a></p>
+  </div>
+</section>
+
+<section class="section"><div class="container">
+  <div class="card-grid">
+    <div class="card" data-reveal><img src="assets/img/gen_service-1.jpg" alt="Preventive dentistry"/><div class="card-body"><h3>Preventive dentistry</h3><p>Cleanings, exams, fluoride, and sealants. The simplest way to avoid bigger problems later.</p></div></div>
+    <div class="card" data-reveal><img src="assets/img/gen_service-2.jpg" alt="Cosmetic dentistry"/><div class="card-body"><h3>Cosmetic dentistry</h3><p>Teeth whitening, veneers, and bonding to give you a smile you are proud of.</p></div></div>
+    <div class="card" data-reveal><img src="assets/img/gen_service-3.jpg" alt="Restorative treatments"/><div class="card-body"><h3>Restorative treatments</h3><p>Fillings, crowns, bridges, and implants to restore function and beauty.</p></div></div>
+    <div class="card" data-reveal><img src="assets/img/gen_service-4.jpg" alt="Orthodontics"/><div class="card-body"><h3>Orthodontics</h3><p>Modern braces and clear aligners tailored to your bite and lifestyle.</p></div></div>
+  </div>
+</div></section>
+
+<section class="section tint"><div class="container" style="max-width:860px;">
+  <div class="sec-head" data-reveal><span class="eyebrow"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 0C6.4 3.2 8.8 5.6 12 6C8.8 6.4 6.4 8.8 6 12C5.6 8.8 3.2 6.4 0 6C3.2 5.6 5.6 3.2 6 0Z" fill="currentColor"/></svg> FAQ</span><h2>Questions We Get Often</h2></div>
+  <div data-reveal style="margin-top:32px;">
+    <div class="acc-item open"><div class="acc-head">How often should I visit the dentist?<span class="plus">+</span></div><div class="acc-body">We recommend a routine checkup every six months to maintain optimal oral health and catch issues early.</div></div>
+    <div class="acc-item"><div class="acc-head">Do you offer emergency dental services?<span class="plus">+</span></div><div class="acc-body">Yes. We keep same-day slots open for urgent pain, injury, and broken teeth. Request a callback and we will fit you in fast.</div></div>
+    <div class="acc-item"><div class="acc-head">Will my treatment be painful?<span class="plus">+</span></div><div class="acc-body">We focus on gentle, modern, low-pain techniques and talk you through every step before we begin.</div></div>
+    <div class="acc-item"><div class="acc-head">Do you accept new patients?<span class="plus">+</span></div><div class="acc-body">Always. Book a visit or request a callback and we will get you set up.</div></div>
+    <div class="acc-item"><div class="acc-head">How much does treatment cost?<span class="plus">+</span></div><div class="acc-body">Costs depend on the treatment. We give clear, upfront estimates before any work begins, with no surprises.</div></div>
+  </div>
+</div></section>
+
+<!-- reuse the index closing CTA section here -->
+```
+
+### blog.html `<main>`
+```html
+<section class="hero tint" style="min-height:auto;padding-block:160px 60px;color:var(--ink);">
+  <div class="container" style="max-width:900px;">
+    <h1 style="color:var(--ink);">Insights for a Healthier Smile</h1>
+    <p class="lead">From everyday habits to advanced treatments, our dental experts share insights to help you care for your smile.</p>
+  </div>
+</section>
+
+<section class="section"><div class="container">
+  <a class="card" href="#" data-reveal style="display:grid;grid-template-columns:1.1fr 1fr;align-items:stretch;">
+    <img src="assets/img/gen_blog-4.jpg" alt="The ultimate guide to brushing" style="aspect-ratio:auto;height:100%;"/>
+    <div class="card-body" style="padding:40px;">
+      <span class="eyebrow">Preventive Care</span>
+      <p style="font-size:13px;color:var(--muted);margin:8px 0;">Oral Health Tips &middot; April 30, 2026</p>
+      <h3 style="font-size:clamp(22px,3vw,32px);">The ultimate guide to brushing: are you doing it right?</h3>
+      <p style="margin:12px 0 20px;">Most people brush too hard and too fast. Here is the gentle two-minute technique dentists actually recommend, plus the tools that make it easier.</p>
+      <span class="btn btn-primary"><span class="btn-text">Read More</span><span class="btn-arrow">&#8599;</span></span>
+    </div>
+  </a>
+  <div class="card-grid">
+    <a class="card" href="#" data-reveal><img src="assets/img/gen_blog-1.jpg" alt="5 daily dental habits"/><div class="card-body"><span class="eyebrow">Preventive Care</span><h3 style="margin:10px 0 6px;">5 daily dental habits that protect your smile</h3><p>Small routines, big payoff.</p></div></a>
+    <a class="card" href="#" data-reveal><img src="assets/img/gen_blog-2.jpg" alt="How veneers transform your smile"/><div class="card-body"><span class="eyebrow">Cosmetic</span><h3 style="margin:10px 0 6px;">How veneers transform your smile</h3><p>What veneers can and cannot do.</p></div></a>
+    <a class="card" href="#" data-reveal><img src="assets/img/gen_blog-3.jpg" alt="Foods that harm your teeth"/><div class="card-body"><span class="eyebrow">Nutrition</span><h3 style="margin:10px 0 6px;">Foods that quietly harm your teeth</h3><p>What erodes enamel, and what to eat instead.</p></div></a>
+    <a class="card" href="#" data-reveal><img src="assets/img/gen_blog-5.jpg" alt="The truth about flossing"/><div class="card-body"><span class="eyebrow">Preventive Care</span><h3 style="margin:10px 0 6px;">The truth about flossing</h3><p>Does it really matter? The evidence.</p></div></a>
+    <a class="card" href="#" data-reveal><img src="assets/img/gen_blog-6.jpg" alt="Dental myths busted"/><div class="card-body"><span class="eyebrow">Education</span><h3 style="margin:10px 0 6px;">Dental myths, busted</h3><p>Sugar is not the only villain.</p></div></a>
+    <a class="card" href="#" data-reveal><img src="assets/img/gen_blog-4.jpg" alt="Brushing guide"/><div class="card-body"><span class="eyebrow">Preventive Care</span><h3 style="margin:10px 0 6px;">The ultimate guide to brushing</h3><p>The gentle two-minute technique.</p></div></a>
+  </div>
+</div></section>
+```
+
+## 22.6 Legal pages (shared template) + 404 (COMPLETE)
+
+All four legal pages share this exact shell. Only the `<title>`, the `<h1>`, and the `<main>` body
+change. Self-contained inline styles so they work even if styles.css is missing.
+
+```html
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Privacy Policy | [BUSINESS_NAME]</title>
+<meta name="description" content="How [BUSINESS_NAME] collects, uses, and protects your information."/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="assets/img/favicon.svg" rel="shortcut icon" type="image/svg+xml"/>
+<style>
+ body{margin:0;background:#fafafa;color:#011f23;font-family:Sora,'Helvetica Neue',Arial,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased;}
+ .lg-nav{display:flex;align-items:center;justify-content:space-between;padding:24px 6vw;border-bottom:1px solid #e2e2e2;}
+ .lg-nav a.back{color:[ACCENT];font-weight:500;font-size:15px;text-decoration:none;}
+ .lg-wrap{max-width:760px;margin:0 auto;padding:64px 24px 96px;}
+ .lg-wrap h1{font-size:clamp(32px,5vw,48px);font-weight:600;letter-spacing:-1px;margin:0 0 8px;}
+ .lg-wrap .updated{color:#758696;font-size:14px;margin-bottom:40px;}
+ .lg-wrap h2{font-size:22px;font-weight:600;margin:40px 0 12px;}
+ .lg-wrap p,.lg-wrap li{color:#3a4a4d;font-size:16px;} .lg-wrap a{color:[ACCENT];}
+ .lg-foot{text-align:center;padding:40px 24px;border-top:1px solid #e2e2e2;color:#758696;font-size:14px;}
+</style></head><body>
+ <div class="lg-nav">
+   <a href="index.html"><img src="assets/img/logo.svg" alt="[BUSINESS_NAME] logo" height="30"/></a>
+   <a class="back" href="index.html">&larr; Back to home</a>
+ </div>
+ <main class="lg-wrap">
+   <h1>Privacy Policy</h1>
+   <p class="updated">Last updated: June 2026</p>
+   <p>At [BUSINESS_NAME], your privacy and trust matter to us as much as your smile. This policy explains what information we collect when you visit our website or book an appointment, and how we keep it safe.</p>
+   <h2>Information we collect</h2>
+   <p>When you book a visit or contact us, we may collect your name, phone number, email address, and any details you choose to share about your needs. We also collect basic, anonymous analytics so we can improve the site.</p>
+   <h2>How we use it</h2>
+   <ul><li>To schedule, confirm, and follow up on your appointments.</li><li>To respond to your questions and provide the care you request.</li><li>To send reminders and, only with your consent, occasional updates.</li></ul>
+   <h2>How we protect it</h2>
+   <p>We treat your information as confidential and store it securely. We never sell your personal data. We share it only with the people and systems directly involved in your care, or where required by law.</p>
+   <h2>Your choices</h2>
+   <p>Request access to, correction of, or deletion of your information any time at <a href="mailto:[EMAIL]">[EMAIL]</a>. You can opt out of non-essential messages whenever you like.</p>
+   <h2>Contact</h2>
+   <p>Questions? Email <a href="mailto:[EMAIL]">[EMAIL]</a> or book through our <a href="[BOOKING_URL]">appointment page</a>.</p>
+ </main>
+ <div class="lg-foot">&copy; 2026 [BUSINESS_NAME]. All rights reserved. &middot; <a style="color:#758696" href="terms.html">Terms</a></div>
+</body></html>
+```
+
+Bodies for the other three (swap the `<h1>`, `<title>`, and the `<main>` sections):
+- **terms.html** ("Terms & Conditions"): Use of this website (informational, not a substitute for
+  professional advice); Appointments (requests confirmed by the team; 24h notice to cancel; repeated
+  no-shows affect availability); Intellectual property (all content owned by [BUSINESS_NAME]);
+  Limitation of liability (not liable for indirect damages; outcomes vary and are discussed in person);
+  Contact.
+- **cookies.html** ("Cookie Policy"): What cookies are; how we use them (essential, analytics,
+  preference); managing cookies via browser settings; Contact.
+- **licenses.html** ("Licenses"): Site content owned by [BUSINESS_NAME]; imagery owned/generated/
+  licensed for this site only; third-party software (GSAP standard license; Sora under SIL OFL);
+  permitted use (view and link, no copying without consent); Contact.
+
+### 404.html (COMPLETE, standalone)
+```html
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
+<title>Page not found | [BUSINESS_NAME]</title>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="assets/img/favicon.svg" rel="shortcut icon" type="image/svg+xml"/>
+<style>body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+background:#fafafa;color:#011f23;font-family:Sora,Arial,sans-serif;text-align:center;padding:24px}
+h1{font-size:clamp(64px,12vw,140px);margin:0;letter-spacing:-3px}p{color:#5d6c7b;font-size:18px;margin:8px 0 28px}
+a{background:#011f23;color:#fff;text-decoration:none;padding:14px 26px;border-radius:999px;font-weight:500}</style>
+</head><body><h1>404</h1><p>We couldn't find that page.</p><a href="index.html">Back to home</a></body></html>
+```
+
+## 22.7 Build, run, and deploy commands (COMPLETE)
+```bash
+# 0. scaffold
+mkdir -p myclinic/assets/css myclinic/assets/js myclinic/assets/img && cd myclinic
+touch .nojekyll
+
+# 1. download GSAP locally (or copy from a CDN download)
+curl -L -o assets/js/gsap.min.js          https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js
+curl -L -o assets/js/ScrollTrigger.min.js https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js
+
+# 2. write all the files from section 22 (styles.css, app.js, the 9 HTML pages, logo/favicon SVGs)
+#    generate or fall back the gen_*.jpg images per section 5 + 5.2
+
+# 3. run locally and SELF-VERIFY in the browser (paste the 15.1 snippet on each page)
+python3 -m http.server 8000   # open http://127.0.0.1:8000
+
+# 4. deploy to GitHub Pages
+git init && git add -A && git commit -m "Launch site"
+gh repo create myclinic --public --source=. --remote=origin --push
+gh api -X POST repos/<owner>/myclinic/pages -f "source[branch]=main" -f "source[path]=/"
+# wait for the build, then open https://<owner>.github.io/myclinic/ and re-run the 15.1 snippet live
+```
+
+## 22.8 DEFINITION OF DONE (do not declare finished until ALL are true)
+- The section 15.1 snippet prints OK on index, about, service, blog, and all legal pages.
+- The hero H1 is visible the instant each page loads (test with JS disabled too).
+- Scroll reveals animate; hover effects work (buttons/cards lift, images zoom, nav underline, slider
+  arrows highlight); counters count up; both sliders drag and advance; accordion opens.
+- Every image paints a real picture (no gray boxes, no broken icons), via generation or fallback.
+- The lead form opens a prefilled WhatsApp message and shows its success state.
+- No `opacity:0` remains in any HTML/CSS for content; no em dashes anywhere; no builder fingerprints.
+- The live deployed URL passes all of the above, not just the local copy.
+
+END OF COMPLETE BUILD.
