@@ -36,7 +36,7 @@ deletes images during a re-skin, nothing ever shows a broken/gray/red box — it
 
 ## Wiring
 - Nav/footer links are local `.html` files. All "Book/Get Appointment" CTAs (×6) →
-  `https://calendly.com/shreyasrajsony11` (Shreyas's connected Calendly).
+  `index.html#lead-form-card` (WhatsApp lead routing to 8667858089).
 
 ## Interactions
 - Webflow IX2 (jQuery-dependent) + GSAP/ScrollTrigger/SplitText + inline GSAP (animated counters
@@ -91,7 +91,7 @@ is a CSS variant and is fine to keep.)
 - `ONESHOT_PROMPT.md` = comprehensive prompt to regenerate this site from scratch with [PLACEHOLDERS].
 
 ## Conversion + content updates (14 Jun 2026)
-- Phone is `+91 93007512816` everywhere (display + tel: + wa.me 9193007512816).
+- Phone is `+91 86678 58089` everywhere (display + tel: + wa.me 918667858089).
 - Hero **lead-capture form** (`.lead-form_card`, "Book a visit", name+phone) on both variants. On
   submit it opens a prefilled WhatsApp to the clinic and shows a success state. ALWAYS visible (not
   gated by reveal). Handler `leadSubmit()` injected before </body> on index pages; CSS in lumora.css.

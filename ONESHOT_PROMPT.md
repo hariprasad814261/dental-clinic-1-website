@@ -86,10 +86,10 @@ must not depend on one specific environment. Enforce ALL of these or you have fa
 [SHORT_NAME]      = "Lumora"                   # one-word wordmark, used in the logo and "At Lumora, we…"
 [TAGLINE]         = "Modern, Gentle Dentistry" # appended to the homepage <title> after a pipe
 [EMAIL]           = "hello@lumoradental.com"
-[PHONE_DISPLAY]   = "+91 93007512816"          # shown to users
-[PHONE_TEL]       = "+9193007512816"           # used in tel: and wa.me links (no spaces / symbols)
-[WHATSAPP_NUMBER] = "9193007512816"            # used in https://wa.me/<number>
-[BOOKING_URL]     = "https://calendly.com/your-handle"   # every "Book/Get Appointment" CTA
+[PHONE_DISPLAY]   = "+91 86678 58089"          # shown to users
+[PHONE_TEL]       = "+918667858089"           # used in tel: and wa.me links (no spaces / symbols)
+[WHATSAPP_NUMBER] = "918667858089"            # used in https://wa.me/<number>
+[BOOKING_URL]     = "index.html#lead-form-card" # every "Book/Get Appointment" CTA
 [ACCENT]          = "#24a3b1"                   # primary accent (teal). Blue variant uses #2f80ff
 [INK_DARK]        = "#011f23"                   # deep brand dark (text + dark sections). Blue: #06182e
 [CREDIT]          = "Crafted by RapidXAI"       # footer maker credit

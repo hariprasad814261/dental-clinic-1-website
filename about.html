@@ -151,7 +151,7 @@
                         <div class="navbar-button_wrapper">
                             <div class="navbar_button hide-mobile">
                                 <div class="button-container">
-                                    <a data-wf--button-primary--variant="light-small" href="#" class="button_primary w-variant-fb89ee7f-8db1-8e54-55c6-075f0151c951 w-inline-block">
+                                    <a data-wf--button-primary--variant="light-small" href="index.html#lead-form-card" class="button_primary w-variant-fb89ee7f-8db1-8e54-55c6-075f0151c951 w-inline-block">
                                         <div class="button_inner">
                                             <div class="button-text_wrap">
                                                 <div class="button_text">Get Appointment</div>
@@ -200,7 +200,7 @@
                                                 <p data-w-id="2a63e096-69fe-d674-1e81-e817d23d0490" style="opacity:0" class="about-hero_para">At Dr. Dinakar’s Dental Care, we combine compassion, innovation, and expertise to provide care you can trust. Your smile is our mission, and your comfort is our priority.</p>
                                             </div>
                                             <div data-w-id="2a63e096-69fe-d674-1e81-e817d23d0492" style="opacity:0" class="button-container">
-                                                <a data-wf--button-primary--variant="base" href="#" class="button_primary w-inline-block">
+                                                <a data-wf--button-primary--variant="base" href="index.html#lead-form-card" class="button_primary w-inline-block">
                                                     <div class="button_inner">
                                                         <div class="button-text_wrap">
                                                             <div class="button_text">Book An Appointment</div>
@@ -1384,6 +1384,9 @@
                                 <img src="assets/img/lumora-logo-dark.svg" loading="lazy" alt="Dr. Dinakar’s Dental Care logo" class="brand_logo"/>
                             </a>
                             <div class="footer-contact_wrap">
+                                <a href="https://wa.me/918667858089" target="_blank" class="footer-contact_link w-inline-block">
+                                    <div>WhatsApp: +91 86678 58089</div>
+                                </a>
                                 <a href="tel:+91 96770 77009" class="footer-contact_link w-inline-block">
                                     <div>+91 96770 77009</div>
                                 </a>
@@ -1399,7 +1402,7 @@
                                         <p class="footer-info_para">Advanced technology, a caring team, and treatments designed to keep your smile healthy for life. </p>
                                     </div>
                                 </div>
-                                <a data-wf--button-primary--variant="light" href="#" class="button_primary w-variant-62db4792-8717-dbe8-e811-0d36eb02f9ec w-inline-block">
+                                <a data-wf--button-primary--variant="light" href="index.html#lead-form-card" class="button_primary w-variant-62db4792-8717-dbe8-e811-0d36eb02f9ec w-inline-block">
                                     <div class="button_inner">
                                         <div class="button-text_wrap">
                                             <div class="button_text">Get Appointment</div>
@@ -1629,6 +1632,25 @@
   }
   document.querySelectorAll('img').forEach(bind);
 })();
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('a, button, div').forEach(function(el) {
+            var txt = (el.innerText || '').trim();
+            if (txt === 'Book Appointment' || txt === 'Get Appointment' || txt === 'Book An Appointment') {
+                if (el.tagName === 'A') {
+                    el.href = 'index.html#lead-form-card';
+                }
+                el.style.cursor = 'pointer';
+                el.addEventListener('click', function(ev) {
+                    if (el.tagName !== 'A') {
+                        ev.preventDefault();
+                        window.location.href = 'index.html#lead-form-card';
+                    }
+                });
+            }
+        });
+    });
 </script>
 </body>
 </html>

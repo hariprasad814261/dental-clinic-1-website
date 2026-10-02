@@ -151,7 +151,7 @@
                         <div class="navbar-button_wrapper">
                             <div class="navbar_button hide-mobile">
                                 <div class="button-container">
-                                    <a data-wf--button-primary--variant="light-small" href="#" class="button_primary w-variant-fb89ee7f-8db1-8e54-55c6-075f0151c951 w-inline-block">
+                                    <a data-wf--button-primary--variant="light-small" href="index.html#lead-form-card" class="button_primary w-variant-fb89ee7f-8db1-8e54-55c6-075f0151c951 w-inline-block">
                                         <div class="button_inner">
                                             <div class="button-text_wrap">
                                                 <div class="button_text">Get Appointment</div>
@@ -285,7 +285,7 @@
                                             </h1>
                                         </div>
                                         <div id="w-node-f0574d8d-d7db-5d0b-1fe7-ab60f4e5adac-965ec343" data-w-id="f0574d8d-d7db-5d0b-1fe7-ab60f4e5adac" style="-webkit-transform:translate3d(0, 25%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-moz-transform:translate3d(0, 25%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);-ms-transform:translate3d(0, 25%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);transform:translate3d(0, 25%, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0) skew(0, 0);opacity:0" class="blog-header_button">
-                                            <a data-wf--button-primary--variant="base" href="#" class="button_primary w-inline-block">
+                                            <a data-wf--button-primary--variant="base" href="index.html#lead-form-card" class="button_primary w-inline-block">
                                                 <div class="button_inner">
                                                     <div class="button-text_wrap">
                                                         <div class="button_text">Book Appointment</div>
@@ -656,6 +656,9 @@
                                 <a href="tel:+91 96770 77009" class="footer-contact_link w-inline-block">
                                     <div>+91 96770 77009</div>
                                 </a>
+                                <a href="https://wa.me/918667858089" target="_blank" rel="noopener" class="footer-contact_link w-inline-block" style="display:inline-flex; align-items:center; gap:6px; color:#25D366; font-weight:600;">
+                                    <span>WhatsApp: +91 86678 58089</span>
+                                </a>
                                 <a href="mailto:test@gmail.com?subject=Support" class="footer-contact_link w-inline-block">
                                     <div>test@gmail.com</div>
                                 </a>
@@ -668,7 +671,7 @@
                                         <p class="footer-info_para">Advanced technology, a caring team, and treatments designed to keep your smile healthy for life. </p>
                                     </div>
                                 </div>
-                                <a data-wf--button-primary--variant="light" href="#" class="button_primary w-variant-62db4792-8717-dbe8-e811-0d36eb02f9ec w-inline-block">
+                                <a data-wf--button-primary--variant="light" href="index.html#lead-form-card" class="button_primary w-variant-62db4792-8717-dbe8-e811-0d36eb02f9ec w-inline-block">
                                     <div class="button_inner">
                                         <div class="button-text_wrap">
                                             <div class="button_text">Get Appointment</div>
@@ -898,6 +901,20 @@
   }
   document.querySelectorAll('img').forEach(bind);
 })();
+</script>
+<script>
+// Route any appointment buttons or triggers to booking form
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('a, button').forEach(function(el) {
+        var txt = (el.textContent || '').trim().toLowerCase();
+        var href = el.getAttribute('href') || '';
+        if (txt.includes('book an appointment') || txt.includes('book appointment') || txt.includes('get appointment')) {
+            if (!href || href === '#' || href === 'javascript:void(0)') {
+                el.setAttribute('href', 'index.html#lead-form-card');
+            }
+        }
+    });
+});
 </script>
 </body>
 </html>
