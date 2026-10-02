@@ -1977,12 +1977,8 @@
                     }).catch(function(){});
                 } catch(err) {}
 
-                // Redirect to WhatsApp at 8667858089
-                try {
-                    window.open(whatsappUrl, "_blank");
-                } catch(_) {
-                    window.location.href = whatsappUrl;
-                }
+                // Redirect directly to WhatsApp at 8667858089
+                window.location.href = whatsappUrl;
 
                 var card = f.closest('.lead-form_card');
                 if(card){
